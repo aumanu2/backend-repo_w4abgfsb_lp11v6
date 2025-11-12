@@ -12,10 +12,9 @@ Model name is converted to lowercase for the collection name:
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List, Dict
 
-# Example schemas (replace with your own):
-
+# Example schemas (you can still use these if needed)
 class User(BaseModel):
     """
     Users collection schema
@@ -38,11 +37,42 @@ class Product(BaseModel):
     category: str = Field(..., description="Product category")
     in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
-# --------------------------------------------------
+# Financial Protection Agent Schemas
+class FinancialProfile(BaseModel):
+    email: str = Field(..., description="User email to associate data")
+    monthly_income: float = Field(..., ge=0, description="Average monthly income")
+    monthly_expenses: float = Field(..., ge=0, description="Average monthly fixed expenses")
+    savings: float = Field(0, ge=0, description="Liquid savings available for emergencies")
+    dependents: int = Field(0, ge=0, description="Number of dependents")
+    risk_tolerance: str = Field("medium", description="low | medium | high")
+    insurance_health: bool = Field(False)
+    insurance_renters: bool = Field(False)
+    insurance_auto: bool = Field(False)
+    insurance_life: bool = Field(False)
+    budgets: Optional[Dict[str, float]] = Field(None, description="Optional category budgets per month")
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Transaction(BaseModel):
+    # Use string to avoid BSON date encoding issues in Mongo
+    date: Optional[str] = Field(None, description="Transaction date as YYYY-MM-DD")
+    description: str = Field(..., description="Transaction description or memo")
+    merchant: Optional[str] = Field(None, description="Merchant name if available")
+    category: Optional[str] = Field(None, description="Spending category")
+    amount: float = Field(..., description="Positive for outflow (debit), negative for inflow (credit)")
+    type: Optional[str] = Field(None, description="debit | credit")
+
+class AnalysisRequest(BaseModel):
+    profile: FinancialProfile
+    transactions: List[Transaction] = Field(default_factory=list)
+
+class Alert(BaseModel):
+    user_email: str
+    alert_type: str
+    severity: str
+    message: str
+    data: Optional[dict] = None
+
+class AnalysisResult(BaseModel):
+    score: int
+    summary: str
+    alerts: List[Alert]
+    stats: Dict[str, float]
